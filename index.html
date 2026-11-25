@@ -24,6 +24,7 @@ body{background:var(--bg);color:var(--ink);font:15px/1.4 "Segoe UI",system-ui,-a
 .lock.up{transform:translateY(-105%)}
 .lock .tm{font-size:76px;font-weight:300;letter-spacing:-2px}
 .lock .dt{opacity:.85}
+.lock .loc{opacity:.75;font-size:13px;margin-top:4px}
 .lock .hint{position:absolute;bottom:50px;font-size:13px;opacity:.8}
 .home{padding:50px 18px 0;display:flex;flex-direction:column}
 .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 6px;margin-top:10px}
@@ -42,7 +43,8 @@ body{background:var(--bg);color:var(--ink);font:15px/1.4 "Segoe UI",system-ui,-a
 button.pill{border:0;border-radius:999px;padding:10px 18px;background:var(--a);color:#fff;font:inherit;font-weight:600;cursor:pointer}
 button.pill.ghost{background:var(--l);color:var(--t)}
 .row{display:flex;gap:10px}
-input[type=text]{flex:1;min-width:0;border:1px solid var(--l);background:transparent;color:inherit;border-radius:12px;padding:10px 12px;font:inherit}
+input[type=text],select{flex:1;min-width:0;border:1px solid var(--l);background:transparent;color:inherit;border-radius:12px;padding:10px 12px;font:inherit}
+select option{color:#16302b;background:#fff}
 .calc{height:100%;display:flex;flex-direction:column}
 .disp{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding-bottom:12px;overflow:hidden}
 .disp small{opacity:.55;min-height:20px}
@@ -60,13 +62,17 @@ ul{list-style:none;padding:0;margin-top:14px}
 li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--l)}
 li.empty{opacity:.6;display:block;border:0}
 .x{background:none;border:0;color:var(--a);font:inherit;cursor:pointer}
-.set{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--l)}
+.set{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 0;border-bottom:1px solid var(--l)}
 .set input[type=text]{flex:none;width:58%;text-align:right;border:0;border-radius:0;padding:4px 0}
+.set b{text-align:right}
 .sws{display:flex;gap:10px;margin:10px 0 18px}
 .sws button{width:44px;height:64px;border-radius:12px;border:2px solid transparent;cursor:pointer;background-size:cover}
 .sws button.sel{border-color:var(--a)}
 .cam video{width:100%;border-radius:16px;background:#000;aspect-ratio:3/4;object-fit:cover}
 .cam p{margin-top:12px;opacity:.7}
+.ytv{margin-top:14px}
+.ytv iframe{display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:12px;background:#000}
+.note{font-size:12px;opacity:.65;margin-top:10px}
 .tog{position:fixed;top:10px;right:10px;z-index:30;border:0;border-radius:999px;padding:9px 16px;background:var(--a);color:#fff;font:inherit;font-weight:600;cursor:pointer;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mgr{position:fixed;top:0;right:0;bottom:0;width:min(330px,100vw);z-index:40;background:var(--bg);box-shadow:-8px 0 30px rgba(0,0,0,.25);padding:16px;display:flex;flex-direction:column;gap:10px;transform:translateX(105%);transition:transform .25s}
 .mgr.open{transform:none}
@@ -90,14 +96,14 @@ li.empty{opacity:.6;display:block;border:0}
   <div class="screen" id="screen">
     <div class="layer wall" id="wall"></div>
     <div class="cam-hole"></div>
-    <div class="bar"><span id="sbT">00:00</span><span>5G ▂▄▆ 87%</span></div>
+    <div class="bar"><span id="sbT">00:00</span><span id="sbR"></span></div>
     <div class="layer home" id="home">
       <div class="grid" id="grid"></div>
       <div class="dock" id="dock"></div>
     </div>
     <div class="layer app" id="appV"><h2 id="appT"></h2><div class="body" id="appB"></div></div>
     <div class="layer wall lock up" id="lock">
-      <div class="tm" id="lkT"></div><div class="dt" id="lkD"></div>
+      <div class="tm" id="lkT"></div><div class="dt" id="lkD"></div><div class="loc" id="lkL"></div>
       <div class="hint">Geser ke atas untuk membuka</div>
     </div>
     <div class="nav"><button id="back" aria-label="Kembali"><i style="width:12px;height:12px;border-width:0 0 2px 2px;transform:rotate(45deg)"></i></button><button id="goHome" aria-label="Beranda"><i style="width:16px;height:16px;border-radius:50%"></i></button></div>
@@ -108,6 +114,7 @@ li.empty{opacity:.6;display:block;border:0}
 <aside class="mgr" id="mgr" aria-label="Kelola HP">
   <div class="mh"><h3>Kelola HP</h3><span id="dcount"></span></div>
   <div class="row"><button class="pill" id="add1">Tambah HP</button><button class="pill ghost" id="add10">Tambah 10</button></div>
+  <div class="row"><select id="ctry" aria-label="Negara HP aktif"></select><button class="pill ghost" id="ctryall">Semua HP</button></div>
   <div class="row"><input type="text" id="dq" placeholder="Cari nama atau ID"><button class="pill ghost" id="lockall">Kunci semua</button></div>
   <ul id="dlist"></ul>
 </aside>
@@ -117,12 +124,34 @@ const el=h=>{const t=document.createElement('template');t.innerHTML=h.trim();ret
 let DB,S;
 const load=()=>{try{return JSON.parse(localStorage.getItem('hpdb'))}catch{return null}};
 const genId=()=>{const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=n=>Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');return 'HP-'+r(4)+'-'+r(4)+'-'+r(4)};
-const mk=(n,old={})=>({id:genId(),name:'HP '+n,model:'EM-2026',dark:false,wall:(n-1)%4,bright:100,notes:[],locked:true,...old});
+const mk=(n,old={})=>({id:genId(),name:'HP '+n,model:'EM-2026',dark:false,wall:(n-1)%4,bright:100,notes:[],locked:true,country:'ID',...old});
 DB=load();
 if(!DB||!DB.devs?.length){let old={};try{old=JSON.parse(localStorage.getItem('hp')||'{}')}catch{}DB={cur:null,devs:[mk(1,old)]}}
+DB.devs.forEach(d=>{if(!d.country)d.country='ID'});
 S=DB.devs.find(d=>d.id===DB.cur)||DB.devs[0];DB.cur=S.id;
 const save=()=>{try{localStorage.setItem('hpdb',JSON.stringify(DB))}catch{}};
 const WALLS=['linear-gradient(160deg,#1f7a6d,#0f2f3d 60%,#e8a85a 140%)','linear-gradient(200deg,#3b2a6b,#d1577a)','linear-gradient(180deg,#e9d8a6,#5f8f8b)','radial-gradient(circle at 30% 20%,#2c3e3a,#0b1211 70%)'];
+/* ---------- Negara / lokasi ---------- */
+const COUNTRIES=[
+ {code:'ID',name:'Indonesia',flag:'🇮🇩',tz:'Asia/Jakarta',locale:'id-ID',lang:'id',lat:-6.2088,lon:106.8456,city:'Jakarta',carrier:'Telkomsel',dial:'+62'},
+ {code:'MY',name:'Malaysia',flag:'🇲🇾',tz:'Asia/Kuala_Lumpur',locale:'ms-MY',lang:'ms',lat:3.139,lon:101.6869,city:'Kuala Lumpur',carrier:'Maxis',dial:'+60'},
+ {code:'SG',name:'Singapura',flag:'🇸🇬',tz:'Asia/Singapore',locale:'en-SG',lang:'en',lat:1.3521,lon:103.8198,city:'Singapura',carrier:'Singtel',dial:'+65'},
+ {code:'JP',name:'Jepang',flag:'🇯🇵',tz:'Asia/Tokyo',locale:'ja-JP',lang:'ja',lat:35.6762,lon:139.6503,city:'Tokyo',carrier:'Docomo',dial:'+81'},
+ {code:'KR',name:'Korea Selatan',flag:'🇰🇷',tz:'Asia/Seoul',locale:'ko-KR',lang:'ko',lat:37.5665,lon:126.978,city:'Seoul',carrier:'SK Telecom',dial:'+82'},
+ {code:'IN',name:'India',flag:'🇮🇳',tz:'Asia/Kolkata',locale:'en-IN',lang:'en',lat:28.6139,lon:77.209,city:'New Delhi',carrier:'Jio',dial:'+91'},
+ {code:'AE',name:'Uni Emirat Arab',flag:'🇦🇪',tz:'Asia/Dubai',locale:'ar-AE',lang:'ar',lat:25.2048,lon:55.2708,city:'Dubai',carrier:'Etisalat',dial:'+971'},
+ {code:'AU',name:'Australia',flag:'🇦🇺',tz:'Australia/Sydney',locale:'en-AU',lang:'en',lat:-33.8688,lon:151.2093,city:'Sydney',carrier:'Telstra',dial:'+61'},
+ {code:'GB',name:'Inggris',flag:'🇬🇧',tz:'Europe/London',locale:'en-GB',lang:'en',lat:51.5072,lon:-0.1276,city:'London',carrier:'EE',dial:'+44'},
+ {code:'DE',name:'Jerman',flag:'🇩🇪',tz:'Europe/Berlin',locale:'de-DE',lang:'de',lat:52.52,lon:13.405,city:'Berlin',carrier:'Telekom',dial:'+49'},
+ {code:'FR',name:'Prancis',flag:'🇫🇷',tz:'Europe/Paris',locale:'fr-FR',lang:'fr',lat:48.8566,lon:2.3522,city:'Paris',carrier:'Orange',dial:'+33'},
+ {code:'US',name:'Amerika Serikat',flag:'🇺🇸',tz:'America/New_York',locale:'en-US',lang:'en',lat:40.7128,lon:-74.006,city:'New York',carrier:'T-Mobile',dial:'+1'},
+ {code:'MX',name:'Meksiko',flag:'🇲🇽',tz:'America/Mexico_City',locale:'es-MX',lang:'es',lat:19.4326,lon:-99.1332,city:'Mexico City',carrier:'Telcel',dial:'+52'},
+ {code:'BR',name:'Brasil',flag:'🇧🇷',tz:'America/Sao_Paulo',locale:'pt-BR',lang:'pt',lat:-23.5505,lon:-46.6333,city:'São Paulo',carrier:'Vivo',dial:'+55'}
+];
+const C=()=>COUNTRIES.find(c=>c.code===S.country)||COUNTRIES[0];
+// waktu & tanggal mengikuti zona waktu negara HP aktif
+const fmtTime=(o={})=>new Date().toLocaleTimeString(C().locale,{timeZone:C().tz,hourCycle:'h23',hour:'2-digit',minute:'2-digit',...o}).replace('.',':').replace('.',':');
+const fmtDate=()=>new Date().toLocaleDateString(C().locale,{timeZone:C().tz,weekday:'long',day:'numeric',month:'long'});
 const screen=$('#screen');
 function theme(){
   screen.dataset.theme=S.dark?'dark':'light';
@@ -164,7 +193,7 @@ const apps={
   const iv=setInterval(()=>{if(on)sw.textContent=fmt(acc+Date.now()-t0)},100);
   a.onclick=()=>{if(on){acc+=Date.now()-t0;on=false;a.textContent='Lanjut'}else{t0=Date.now();on=true;a.textContent='Berhenti'}};
   $('#r',w).onclick=()=>{on=false;acc=0;sw.textContent='00:00.0';a.textContent='Mulai'};
-  const tick=()=>{const d=new Date();$('.big',w).textContent=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('.cen',w).textContent=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})};
+  const tick=()=>{$('.big',w).textContent=fmtTime({second:'2-digit'});$('.cen',w).textContent=C().flag+' '+C().city+', '+fmtDate()};
   tick();return{el:w,tick,close(){clearInterval(iv)}};
  }},
  catatan:{n:'Catatan',i:'📝',c:'#d9a441',run(){
@@ -193,6 +222,66 @@ const apps={
   }).catch(()=>{$('p',w).textContent='Kamera tidak bisa dibuka. Izinkan akses kamera di browser, lalu buka lagi.'});
   if(!navigator.mediaDevices)$('p',w).textContent='Browser ini tidak mendukung kamera.';
   return{el:w,close(){closed=true;st?.getTracks().forEach(t=>t.stop())}};
+ }},
+ youtube:{n:'YouTube',i:'▶️',c:'#d92b2b',run(){
+  const PRESET=[
+   ['jNQXAC9IVRw','Me at the zoo (video pertama YouTube)'],
+   ['aqz-KE-bpKQ','Big Buck Bunny (film animasi Blender)'],
+   ['dQw4w9WgXcQ','Rick Astley, Never Gonna Give You Up']
+  ];
+  const w=el('<div class="yt"><div class="row"><input type="text" placeholder="Tempel link atau ID video"><button class="pill">Putar</button></div><div class="ytv"></div><p class="note"></p><h4>Video uji</h4><ul></ul></div>');
+  const inp=$('input',w),box=$('.ytv',w),note=$('.note',w),ul=$('ul',w);
+  let vid=null;
+  const parse=v=>{v=v.trim();const m=v.match(/(?:youtu\.be\/|[?&]v=|embed\/|shorts\/|live\/)([\w-]{11})/)||v.match(/^([\w-]{11})$/);return m?m[1]:null};
+  const play=id=>{
+    vid=id;const l=C().lang;
+    const f=document.createElement('iframe');
+    f.src='https://www.youtube-nocookie.com/embed/'+id+'?playsinline=1&rel=0&hl='+l+'&cc_lang_pref='+l;
+    f.allow='autoplay; encrypted-media; picture-in-picture; fullscreen';
+    f.allowFullscreen=true;f.title='Pemutar YouTube';
+    box.replaceChildren(f);
+    note.textContent='Antarmuka pemutar memakai bahasa '+C().name+' (hl='+l+'). Ketersediaan video tetap mengikuti IP asli peramban, bukan negara HP.';
+  };
+  const go=()=>{const id=parse(inp.value);if(!id){note.textContent='Link atau ID video tidak dikenali.';return}play(id)};
+  $('.pill',w).onclick=go;inp.onkeydown=e=>{if(e.key==='Enter')go()};
+  PRESET.forEach(([id,t])=>{
+    const li=document.createElement('li'),b=document.createElement('button');
+    b.className='dt2';b.textContent=t;b.onclick=()=>{inp.value=id;play(id)};
+    li.append(b);ul.append(li);
+  });
+  play(PRESET[0][0]);
+  return{el:w,country(){if(vid)play(vid)}};
+ }},
+ lokasi:{n:'Lokasi',i:'📍',c:'#2f9e5f',run(){
+  const w=el('<div><div id="inf"></div><button class="pill ghost" id="ip" style="margin-top:14px">Cek lokasi IP asli</button><p class="note" id="ipo"></p><h4>Pilih negara</h4><ul></ul></div>');
+  const inf=$('#inf',w),ul=$('ul',w),ipo=$('#ipo',w);
+  const row=(k,v)=>{const d=document.createElement('div');d.className='set';const a=document.createElement('span'),b=document.createElement('b');a.textContent=k;b.textContent=v;d.append(a,b);return d};
+  const draw=()=>{
+    const c=C();
+    inf.replaceChildren(
+      row('Negara',c.flag+' '+c.name),row('Kota',c.city),
+      row('Koordinat',c.lat.toFixed(4)+', '+c.lon.toFixed(4)),
+      row('Zona waktu',c.tz),row('Bahasa / format',c.locale),
+      row('Operator',c.carrier+' ('+c.dial+')')
+    );
+    ul.replaceChildren();
+    COUNTRIES.forEach(k=>{
+      const li=document.createElement('li');li.className='dv'+(k.code===S.country?' on':'');
+      const b=document.createElement('button');b.className='dt2';
+      const t=document.createElement('b'),s=document.createElement('small');
+      t.textContent=k.flag+' '+k.name;s.textContent=k.city+', '+k.tz;
+      b.append(t,s);b.onclick=()=>setCountry(k.code);
+      li.append(b);ul.append(li);
+    });
+  };
+  $('#ip',w).onclick=async()=>{
+    ipo.textContent='Memeriksa...';
+    try{
+      const r=await fetch('https://ipapi.co/json/');const d=await r.json();
+      ipo.textContent='IP asli peramban: '+d.ip+' ('+d.city+', '+d.country_name+'). Ini tidak berubah saat negara HP diganti.';
+    }catch{ipo.textContent='Gagal memeriksa IP (diblokir atau offline).'}
+  };
+  draw();return{el:w,country:draw};
  }},
  pengaturan:{n:'Pengaturan',i:'⚙️',c:'#5b6b73',run(){
   const w=el('<div><div class="set"><span>Mode gelap</span><input type="checkbox" id="dk"></div><h4>Wallpaper</h4><div class="sws"></div><h4>Kecerahan</h4><input type="range" id="br" min="30" max="100" style="width:100%"><h4>Info perangkat</h4><div class="set"><span>Nama</span><input type="text" id="nm" maxlength="24"></div><div class="set"><span>Model</span><input type="text" id="md" maxlength="24"></div><div class="set"><span>ID HP</span><input type="text" id="di" maxlength="24"></div><div class="set"><span>Buat ID baru secara acak</span><button class="x" id="rn">Acak ID</button></div><div class="set"><span>Hapus semua HP dan mulai dari awal</span><button class="x" id="rs">Atur ulang</button></div></div>');
@@ -237,7 +326,7 @@ function mkIcon(id){
   b.innerHTML='<span style="background:'+a.c+'">'+a.i+'</span>'+a.n;
   b.onclick=()=>openApp(id);return b;
 }
-['kalkulator','jam','catatan','kamera'].forEach(id=>$('#grid').append(mkIcon(id)));
+['kalkulator','jam','catatan','kamera','youtube','lokasi'].forEach(id=>$('#grid').append(mkIcon(id)));
 ['pengaturan'].forEach(id=>$('#dock').append(mkIcon(id)));
 $('#back').onclick=$('#goHome').onclick=closeApp;
 $('#pwr').onclick=()=>{closeApp();setLock(true)};
@@ -246,11 +335,13 @@ let y0=null;
 lock.onpointerdown=e=>{y0=e.clientY};
 lock.onpointerup=e=>{if(y0!==null&&(y0-e.clientY>50||Math.abs(y0-e.clientY)<6))setLock(false);y0=null};
 lock.tabIndex=0;lock.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')setLock(false)};
-// jam sistem
+// jam sistem (mengikuti zona waktu negara HP)
 function tick(){
-  const d=new Date(),t=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}).replace('.',':');
+  const c=C(),t=fmtTime();
   $('#sbT').textContent=t;$('#lkT').textContent=t;
-  $('#lkD').textContent=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'});
+  $('#sbR').textContent=c.flag+' '+c.carrier+' 5G ▂▄▆ 87%';
+  $('#lkD').textContent=fmtDate();
+  $('#lkL').textContent='📍 '+c.city+', '+c.name;
   cur?.tick?.();
 }
 tick();setInterval(tick,1000);
@@ -262,19 +353,28 @@ function fit(){
 }
 addEventListener('resize',fit);fit();
 /* ---------- Pengelola banyak HP ---------- */
-const mgr=$('#mgr'),list=$('#dlist'),q=$('#dq');
+const mgr=$('#mgr'),list=$('#dlist'),q=$('#dq'),ctry=$('#ctry');
+COUNTRIES.forEach(c=>{const o=document.createElement('option');o.value=c.code;o.textContent=c.flag+' '+c.name;ctry.append(o)});
+function setCountry(code,all){
+  (all?DB.devs:[S]).forEach(d=>d.country=code);
+  save();tick();renderList();cur?.country?.();
+}
+ctry.onchange=()=>setCountry(ctry.value);
+$('#ctryall').onclick=()=>setCountry(ctry.value,true);
 function setLock(v){S.locked=v;lock.classList.toggle('up',!v);save()}
 function renderList(){
   const f=q.value.trim().toLowerCase();
   $('#dcount').textContent=DB.devs.length+' HP';
   $('#tog').textContent=(S.name||'HP')+' ('+DB.devs.length+')';
+  ctry.value=S.country;
   list.replaceChildren();
   DB.devs.filter(d=>!f||(d.name+' '+d.id+' '+d.model).toLowerCase().includes(f)).forEach(d=>{
     const li=document.createElement('li');li.className='dv'+(d.id===S.id?' on':'');
     const sw=document.createElement('i');sw.style.background=WALLS[d.wall];
     const t=document.createElement('button');t.className='dt2';
     const a=document.createElement('b'),s=document.createElement('small');
-    a.textContent=d.name||'(tanpa nama)';s.textContent=d.id+', '+d.model;
+    const k=COUNTRIES.find(c=>c.code===d.country)||COUNTRIES[0];
+    a.textContent=d.name||'(tanpa nama)';s.textContent=k.flag+' '+d.id+', '+d.model;
     t.append(a,s);
     t.onclick=()=>{switchTo(d.id);if(innerWidth<900)mgr.classList.remove('open')};
     const x=document.createElement('button');x.className='x';x.textContent='Hapus';
@@ -286,7 +386,7 @@ function renderList(){
 }
 function switchTo(id){
   const d=DB.devs.find(x=>x.id===id);if(!d)return;
-  closeApp();S=d;DB.cur=id;save();theme();
+  closeApp();S=d;DB.cur=id;save();theme();tick();
   lock.classList.toggle('up',!S.locked);renderList();
 }
 function addDevs(n){
