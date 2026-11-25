@@ -5,8 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Emulator HP</title>
 <style>
-:root{--bg:#dce6e3;--ink:#16302b;color-scheme:light dark}
-@media(prefers-color-scheme:dark){:root{--bg:#0e1917;--ink:#dce6e3}}
+:root{--bg:#dce6e3;--ink:#16302b;--a:#1f7a6d;--l:rgba(0,0,0,.12);color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1917;--ink:#dce6e3;--a:#4fc3b0;--l:rgba(255,255,255,.14)}}
 *{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font:15px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden}
@@ -61,11 +61,25 @@ li{display:flex;justify-content:space-between;gap:10px;align-items:center;paddin
 li.empty{opacity:.6;display:block;border:0}
 .x{background:none;border:0;color:var(--a);font:inherit;cursor:pointer}
 .set{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--l)}
+.set input[type=text]{flex:none;width:58%;text-align:right;border:0;border-radius:0;padding:4px 0}
 .sws{display:flex;gap:10px;margin:10px 0 18px}
 .sws button{width:44px;height:64px;border-radius:12px;border:2px solid transparent;cursor:pointer;background-size:cover}
 .sws button.sel{border-color:var(--a)}
 .cam video{width:100%;border-radius:16px;background:#000;aspect-ratio:3/4;object-fit:cover}
 .cam p{margin-top:12px;opacity:.7}
+.tog{position:fixed;top:10px;right:10px;z-index:30;border:0;border-radius:999px;padding:9px 16px;background:var(--a);color:#fff;font:inherit;font-weight:600;cursor:pointer;max-width:60vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mgr{position:fixed;top:0;right:0;bottom:0;width:min(330px,100vw);z-index:40;background:var(--bg);box-shadow:-8px 0 30px rgba(0,0,0,.25);padding:16px;display:flex;flex-direction:column;gap:10px;transform:translateX(105%);transition:transform .25s}
+.mgr.open{transform:none}
+.mh{display:flex;justify-content:space-between;align-items:baseline}
+.mgr h3{font-size:18px}
+.mgr .pill.ghost{color:var(--ink)}
+.mgr ul{flex:1;overflow:auto;margin:4px 0 0}
+.dv{gap:10px;justify-content:flex-start;padding:8px 6px;border-radius:12px}
+.dv.on{background:var(--l)}
+.dv i{width:22px;height:34px;border-radius:6px;flex:none}
+.dt2{flex:1;min-width:0;text-align:left;background:none;border:0;color:inherit;font:inherit;cursor:pointer;display:flex;flex-direction:column}
+.dt2 small{opacity:.6;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+@media(min-width:900px){body{gap:28px}.tog{display:none}.mgr{position:static;transform:none;width:330px;height:min(740px,calc(100vh - 16px));box-shadow:none;border:1px solid var(--l);border-radius:20px;flex:none}}
 :focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -90,12 +104,24 @@ li.empty{opacity:.6;display:block;border:0}
     <div class="layer dim" id="dim"></div>
   </div>
 </div>
+<button class="tog" id="tog"></button>
+<aside class="mgr" id="mgr" aria-label="Kelola HP">
+  <div class="mh"><h3>Kelola HP</h3><span id="dcount"></span></div>
+  <div class="row"><button class="pill" id="add1">Tambah HP</button><button class="pill ghost" id="add10">Tambah 10</button></div>
+  <div class="row"><input type="text" id="dq" placeholder="Cari nama atau ID"><button class="pill ghost" id="lockall">Kunci semua</button></div>
+  <ul id="dlist"></ul>
+</aside>
 <script>
 const $=(s,r=document)=>r.querySelector(s);
 const el=h=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstChild};
-const S=(()=>{try{return JSON.parse(localStorage.getItem('hp')||'{}')}catch{return{}}})();
-S.dark??=false;S.wall??=0;S.bright??=100;S.notes??=[];
-const save=()=>{try{localStorage.setItem('hp',JSON.stringify(S))}catch{}};
+let DB,S;
+const load=()=>{try{return JSON.parse(localStorage.getItem('hpdb'))}catch{return null}};
+const genId=()=>{const c='ABCDEFGHJKLMNPQRSTUVWXYZ23456789',r=n=>Array.from({length:n},()=>c[Math.floor(Math.random()*c.length)]).join('');return 'HP-'+r(4)+'-'+r(4)+'-'+r(4)};
+const mk=(n,old={})=>({id:genId(),name:'HP '+n,model:'EM-2026',dark:false,wall:(n-1)%4,bright:100,notes:[],locked:true,...old});
+DB=load();
+if(!DB||!DB.devs?.length){let old={};try{old=JSON.parse(localStorage.getItem('hp')||'{}')}catch{}DB={cur:null,devs:[mk(1,old)]}}
+S=DB.devs.find(d=>d.id===DB.cur)||DB.devs[0];DB.cur=S.id;
+const save=()=>{try{localStorage.setItem('hpdb',JSON.stringify(DB))}catch{}};
 const WALLS=['linear-gradient(160deg,#1f7a6d,#0f2f3d 60%,#e8a85a 140%)','linear-gradient(200deg,#3b2a6b,#d1577a)','linear-gradient(180deg,#e9d8a6,#5f8f8b)','radial-gradient(circle at 30% 20%,#2c3e3a,#0b1211 70%)'];
 const screen=$('#screen');
 function theme(){
@@ -169,7 +195,7 @@ const apps={
   return{el:w,close(){closed=true;st?.getTracks().forEach(t=>t.stop())}};
  }},
  pengaturan:{n:'Pengaturan',i:'⚙️',c:'#5b6b73',run(){
-  const w=el('<div><div class="set"><span>Mode gelap</span><input type="checkbox" id="dk"></div><h4>Wallpaper</h4><div class="sws"></div><h4>Kecerahan</h4><input type="range" id="br" min="30" max="100" style="width:100%"><div class="set"><span>Hapus semua data HP</span><button class="x" id="rs">Atur ulang</button></div></div>');
+  const w=el('<div><div class="set"><span>Mode gelap</span><input type="checkbox" id="dk"></div><h4>Wallpaper</h4><div class="sws"></div><h4>Kecerahan</h4><input type="range" id="br" min="30" max="100" style="width:100%"><h4>Info perangkat</h4><div class="set"><span>Nama</span><input type="text" id="nm" maxlength="24"></div><div class="set"><span>Model</span><input type="text" id="md" maxlength="24"></div><div class="set"><span>ID HP</span><input type="text" id="di" maxlength="24"></div><div class="set"><span>Buat ID baru secara acak</span><button class="x" id="rn">Acak ID</button></div><div class="set"><span>Hapus semua HP dan mulai dari awal</span><button class="x" id="rs">Atur ulang</button></div></div>');
   const dk=$('#dk',w),br=$('#br',w),sws=$('.sws',w);
   dk.checked=S.dark;br.value=S.bright;
   dk.onchange=()=>{S.dark=dk.checked;save();theme()};
@@ -177,10 +203,20 @@ const apps={
   WALLS.forEach((g,i)=>{
     const b=document.createElement('button');b.style.background=g;b.setAttribute('aria-label','Wallpaper '+(i+1));
     if(i===S.wall)b.className='sel';
-    b.onclick=()=>{S.wall=i;save();theme();sws.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('sel',j===i))};
+    b.onclick=()=>{S.wall=i;save();theme();renderList();sws.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('sel',j===i))};
     sws.append(b);
   });
-  $('#rs',w).onclick=()=>{try{localStorage.removeItem('hp')}catch{}location.reload()};
+  const nm=$('#nm',w),md=$('#md',w),di=$('#di',w);
+  nm.value=S.name;md.value=S.model;di.value=S.id;
+  nm.oninput=()=>{S.name=nm.value;save();renderList()};
+  md.oninput=()=>{S.model=md.value;save();renderList()};
+  di.oninput=()=>{
+    const v=di.value.trim();
+    if(!v||DB.devs.some(x=>x!==S&&x.id===v)){di.style.outline='2px solid #d33';return}
+    di.style.outline='';S.id=v;DB.cur=v;save();renderList();
+  };
+  $('#rn',w).onclick=()=>{S.id=genId();DB.cur=S.id;di.value=S.id;di.style.outline='';save();renderList()};
+  $('#rs',w).onclick=()=>{if(!confirm('Hapus semua HP dan mulai dari awal?'))return;try{localStorage.removeItem('hpdb');localStorage.removeItem('hp')}catch{}location.reload()};
   return{el:w};
  }}
 };
@@ -204,12 +240,12 @@ function mkIcon(id){
 ['kalkulator','jam','catatan','kamera'].forEach(id=>$('#grid').append(mkIcon(id)));
 ['pengaturan'].forEach(id=>$('#dock').append(mkIcon(id)));
 $('#back').onclick=$('#goHome').onclick=closeApp;
-$('#pwr').onclick=()=>{closeApp();lock.classList.remove('up')};
+$('#pwr').onclick=()=>{closeApp();setLock(true)};
 // buka kunci: geser ke atas atau ketuk
 let y0=null;
 lock.onpointerdown=e=>{y0=e.clientY};
-lock.onpointerup=e=>{if(y0!==null&&(y0-e.clientY>50||Math.abs(y0-e.clientY)<6))lock.classList.add('up');y0=null};
-lock.tabIndex=0;lock.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')lock.classList.add('up')};
+lock.onpointerup=e=>{if(y0!==null&&(y0-e.clientY>50||Math.abs(y0-e.clientY)<6))setLock(false);y0=null};
+lock.tabIndex=0;lock.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')setLock(false)};
 // jam sistem
 function tick(){
   const d=new Date(),t=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}).replace('.',':');
@@ -220,11 +256,58 @@ function tick(){
 tick();setInterval(tick,1000);
 // skala layar agar muat di HP maupun desktop
 function fit(){
-  const s=Math.min(1,(innerHeight-16)/740,(innerWidth-24)/370);
+  const aw=innerWidth-(innerWidth>=900?360:0);
+  const s=Math.min(1,(innerHeight-16)/740,(aw-24)/370);
   $('#phone').style.transform='scale('+s+')';
 }
 addEventListener('resize',fit);fit();
-theme();lock.classList.remove('up');
+/* ---------- Pengelola banyak HP ---------- */
+const mgr=$('#mgr'),list=$('#dlist'),q=$('#dq');
+function setLock(v){S.locked=v;lock.classList.toggle('up',!v);save()}
+function renderList(){
+  const f=q.value.trim().toLowerCase();
+  $('#dcount').textContent=DB.devs.length+' HP';
+  $('#tog').textContent=(S.name||'HP')+' ('+DB.devs.length+')';
+  list.replaceChildren();
+  DB.devs.filter(d=>!f||(d.name+' '+d.id+' '+d.model).toLowerCase().includes(f)).forEach(d=>{
+    const li=document.createElement('li');li.className='dv'+(d.id===S.id?' on':'');
+    const sw=document.createElement('i');sw.style.background=WALLS[d.wall];
+    const t=document.createElement('button');t.className='dt2';
+    const a=document.createElement('b'),s=document.createElement('small');
+    a.textContent=d.name||'(tanpa nama)';s.textContent=d.id+', '+d.model;
+    t.append(a,s);
+    t.onclick=()=>{switchTo(d.id);if(innerWidth<900)mgr.classList.remove('open')};
+    const x=document.createElement('button');x.className='x';x.textContent='Hapus';
+    x.setAttribute('aria-label','Hapus '+d.name);x.disabled=DB.devs.length<2;
+    x.onclick=()=>delDev(d.id);
+    li.append(sw,t,x);list.append(li);
+  });
+  if(!list.children.length)list.innerHTML='<li class="empty">Tidak ada HP yang cocok.</li>';
+}
+function switchTo(id){
+  const d=DB.devs.find(x=>x.id===id);if(!d)return;
+  closeApp();S=d;DB.cur=id;save();theme();
+  lock.classList.toggle('up',!S.locked);renderList();
+}
+function addDevs(n){
+  let k=DB.devs.length;
+  for(let i=0;i<n;i++)DB.devs.push(mk(++k));
+  save();
+  if(n===1)switchTo(DB.devs[DB.devs.length-1].id);else renderList();
+}
+function delDev(id){
+  if(DB.devs.length<2)return;
+  const d=DB.devs.find(x=>x.id===id);
+  if(!confirm('Hapus '+d.name+' ('+d.id+')? Catatannya ikut terhapus.'))return;
+  DB.devs=DB.devs.filter(x=>x.id!==id);
+  if(S.id===id)switchTo(DB.devs[0].id);else{save();renderList()}
+}
+$('#add1').onclick=()=>addDevs(1);
+$('#add10').onclick=()=>addDevs(10);
+$('#lockall').onclick=()=>{closeApp();DB.devs.forEach(d=>d.locked=true);setLock(true)};
+$('#tog').onclick=()=>mgr.classList.toggle('open');
+q.oninput=renderList;
+theme();lock.classList.toggle('up',!S.locked);renderList();
 </script>
 </body>
 </html>
