@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Emulator HP</title>
+<style>
+:root{--bg:#dce6e3;--ink:#16302b;color-scheme:light dark}
+@media(prefers-color-scheme:dark){:root{--bg:#0e1917;--ink:#dce6e3}}
+*{box-sizing:border-box;margin:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:15px/1.4 "Segoe UI",system-ui,-apple-system,Roboto,sans-serif;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.phone{position:relative;width:360px;height:740px;flex:none;border-radius:44px;background:#0b0f0f;padding:10px;box-shadow:0 0 0 2px #2a3534,0 30px 60px rgba(0,0,0,.35);transform-origin:center}
+.pwr{position:absolute;right:-5px;top:170px;width:5px;height:72px;border-radius:0 3px 3px 0;background:#2a3534;border:0;cursor:pointer}
+.screen{--s:#f6f5f1;--t:#1b2523;--a:#1f7a6d;--l:rgba(0,0,0,.12);position:relative;width:100%;height:100%;border-radius:36px;overflow:hidden;background:#000;color:var(--t)}
+.screen[data-theme=dark]{--s:#141a19;--t:#e8efed;--a:#4fc3b0;--l:rgba(255,255,255,.14)}
+.layer{position:absolute;inset:0}
+.wall{background-size:cover}
+.dim{background:#000;pointer-events:none;z-index:9}
+.bar{position:absolute;top:0;left:0;right:0;height:34px;padding:10px 22px 0;display:flex;justify-content:space-between;font-size:12px;font-weight:600;color:#fff;z-index:6;pointer-events:none}
+.screen.inapp .bar{color:var(--t)}
+.cam-hole{position:absolute;top:10px;left:50%;width:10px;height:10px;margin-left:-5px;border-radius:50%;background:#000;z-index:7}
+.lock{z-index:5;color:#fff;display:flex;flex-direction:column;align-items:center;padding-top:110px;transition:transform .35s ease;cursor:grab;touch-action:none}
+.lock.up{transform:translateY(-105%)}
+.lock .tm{font-size:76px;font-weight:300;letter-spacing:-2px}
+.lock .dt{opacity:.85}
+.lock .hint{position:absolute;bottom:50px;font-size:13px;opacity:.8}
+.home{padding:50px 18px 0;display:flex;flex-direction:column}
+.grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px 6px;margin-top:10px}
+.ic{background:none;border:0;color:#fff;font:inherit;font-size:11px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:pointer}
+.ic span{width:56px;height:56px;border-radius:16px;display:grid;place-items:center;font-size:26px;box-shadow:0 4px 10px rgba(0,0,0,.25)}
+.ic:active span{transform:scale(.92)}
+.dock{margin-top:auto;margin-bottom:56px;padding:12px;border-radius:26px;background:rgba(255,255,255,.2);backdrop-filter:blur(10px);display:flex;justify-content:space-around}
+.app{z-index:4;background:var(--s);padding-top:34px;display:flex;flex-direction:column;transform:translateY(100%);opacity:0;transition:transform .25s ease,opacity .2s;pointer-events:none}
+.app.on{transform:none;opacity:1;pointer-events:auto}
+.app h2{font-size:22px;padding:6px 20px 10px}
+.body{flex:1;overflow:auto;padding:0 20px 60px}
+.nav{position:absolute;bottom:0;left:0;right:0;height:44px;z-index:8;display:flex;justify-content:center;gap:56px;align-items:center}
+.nav button{background:none;border:0;width:40px;height:34px;display:grid;place-items:center;cursor:pointer}
+.nav i{display:block;border:2px solid #fff;opacity:.9}
+.screen.inapp .nav i{border-color:var(--t)}
+button.pill{border:0;border-radius:999px;padding:10px 18px;background:var(--a);color:#fff;font:inherit;font-weight:600;cursor:pointer}
+button.pill.ghost{background:var(--l);color:var(--t)}
+.row{display:flex;gap:10px}
+input[type=text]{flex:1;min-width:0;border:1px solid var(--l);background:transparent;color:inherit;border-radius:12px;padding:10px 12px;font:inherit}
+.calc{height:100%;display:flex;flex-direction:column}
+.disp{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-end;padding-bottom:12px;overflow:hidden}
+.disp small{opacity:.55;min-height:20px}
+.disp b{font-size:44px;font-weight:300;word-break:break-all;text-align:right}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.keys button{height:58px;border:0;border-radius:18px;background:var(--l);color:var(--t);font:inherit;font-size:20px;cursor:pointer}
+.keys .op{background:var(--a);color:#fff}
+.keys .z{grid-column:span 2}
+.big{font-size:56px;font-weight:300;text-align:center;margin-top:10px}
+.cen{text-align:center;opacity:.7;margin-bottom:24px}
+h4{margin:18px 0 8px}
+.sw{font-size:38px;font-weight:300;text-align:center;margin-bottom:14px;font-variant-numeric:tabular-nums}
+.row.c{justify-content:center}
+ul{list-style:none;padding:0;margin-top:14px}
+li{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 0;border-bottom:1px solid var(--l)}
+li.empty{opacity:.6;display:block;border:0}
+.x{background:none;border:0;color:var(--a);font:inherit;cursor:pointer}
+.set{display:flex;justify-content:space-between;align-items:center;padding:14px 0;border-bottom:1px solid var(--l)}
+.sws{display:flex;gap:10px;margin:10px 0 18px}
+.sws button{width:44px;height:64px;border-radius:12px;border:2px solid transparent;cursor:pointer;background-size:cover}
+.sws button.sel{border-color:var(--a)}
+.cam video{width:100%;border-radius:16px;background:#000;aspect-ratio:3/4;object-fit:cover}
+.cam p{margin-top:12px;opacity:.7}
+:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="phone" id="phone">
+  <button class="pwr" id="pwr" aria-label="Tombol daya (kunci layar)"></button>
+  <div class="screen" id="screen">
+    <div class="layer wall" id="wall"></div>
+    <div class="cam-hole"></div>
+    <div class="bar"><span id="sbT">00:00</span><span>5G ▂▄▆ 87%</span></div>
+    <div class="layer home" id="home">
+      <div class="grid" id="grid"></div>
+      <div class="dock" id="dock"></div>
+    </div>
+    <div class="layer app" id="appV"><h2 id="appT"></h2><div class="body" id="appB"></div></div>
+    <div class="layer wall lock up" id="lock">
+      <div class="tm" id="lkT"></div><div class="dt" id="lkD"></div>
+      <div class="hint">Geser ke atas untuk membuka</div>
+    </div>
+    <div class="nav"><button id="back" aria-label="Kembali"><i style="width:12px;height:12px;border-width:0 0 2px 2px;transform:rotate(45deg)"></i></button><button id="goHome" aria-label="Beranda"><i style="width:16px;height:16px;border-radius:50%"></i></button></div>
+    <div class="layer dim" id="dim"></div>
+  </div>
+</div>
+<script>
+const $=(s,r=document)=>r.querySelector(s);
+const el=h=>{const t=document.createElement('template');t.innerHTML=h.trim();return t.content.firstChild};
+const S=(()=>{try{return JSON.parse(localStorage.getItem('hp')||'{}')}catch{return{}}})();
+S.dark??=false;S.wall??=0;S.bright??=100;S.notes??=[];
+const save=()=>{try{localStorage.setItem('hp',JSON.stringify(S))}catch{}};
+const WALLS=['linear-gradient(160deg,#1f7a6d,#0f2f3d 60%,#e8a85a 140%)','linear-gradient(200deg,#3b2a6b,#d1577a)','linear-gradient(180deg,#e9d8a6,#5f8f8b)','radial-gradient(circle at 30% 20%,#2c3e3a,#0b1211 70%)'];
+const screen=$('#screen');
+function theme(){
+  screen.dataset.theme=S.dark?'dark':'light';
+  document.querySelectorAll('.wall').forEach(w=>w.style.background=WALLS[S.wall]);
+  $('#dim').style.opacity=(100-S.bright)/100*.7;
+}
+/* ---------- Aplikasi ---------- */
+const apps={
+ kalkulator:{n:'Kalkulator',i:'🧮',c:'#e8833a',run(){
+  const w=el('<div class="calc"><div class="disp"><small></small><b>0</b></div><div class="keys"></div></div>');
+  const b=$('b',w),sm=$('small',w),K=$('.keys',w);let ex='';
+  const press=k=>{
+    if(k==='C')ex='';
+    else if(k==='⌫')ex=ex.slice(0,-1);
+    else if(k==='='){
+      if(!ex)return;
+      try{
+        const e=ex.replace(/÷/g,'/').replace(/×/g,'*').replace(/−/g,'-').replace(/%/g,'/100');
+        if(!/^[\d+\-*/.() ]+$/.test(e))throw 0;
+        const r=Function('"use strict";return ('+e+')')();
+        if(!isFinite(r))throw 0;
+        sm.textContent=ex;ex=String(+r.toFixed(10));
+      }catch{ex='';b.textContent='Error';return}
+    }else ex+=k;
+    b.textContent=ex||'0';
+  };
+  'C ⌫ % ÷ 7 8 9 × 4 5 6 − 1 2 3 + 0 . ='.split(' ').forEach(k=>{
+    const x=document.createElement('button');x.textContent=k;
+    if('÷×−+='.includes(k))x.className='op';if(k==='0')x.className='z';
+    x.onclick=()=>press(k);K.append(x);
+  });
+  return{el:w};
+ }},
+ jam:{n:'Jam',i:'⏰',c:'#4a6fa5',run(){
+  const w=el('<div><div class="big"></div><div class="cen"></div><h4>Stopwatch</h4><div class="sw">00:00.0</div><div class="row c"><button class="pill" id="a">Mulai</button><button class="pill ghost" id="r">Atur ulang</button></div></div>');
+  let t0=0,acc=0,on=false;
+  const sw=$('.sw',w),a=$('#a',w);
+  const fmt=ms=>{const t=Math.floor(ms/100),m=Math.floor(t/600),s=Math.floor(t/10)%60;return String(m).padStart(2,'0')+':'+String(s).padStart(2,'0')+'.'+t%10};
+  const iv=setInterval(()=>{if(on)sw.textContent=fmt(acc+Date.now()-t0)},100);
+  a.onclick=()=>{if(on){acc+=Date.now()-t0;on=false;a.textContent='Lanjut'}else{t0=Date.now();on=true;a.textContent='Berhenti'}};
+  $('#r',w).onclick=()=>{on=false;acc=0;sw.textContent='00:00.0';a.textContent='Mulai'};
+  const tick=()=>{const d=new Date();$('.big',w).textContent=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit',second:'2-digit'});$('.cen',w).textContent=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'})};
+  tick();return{el:w,tick,close(){clearInterval(iv)}};
+ }},
+ catatan:{n:'Catatan',i:'📝',c:'#d9a441',run(){
+  const w=el('<div><div class="row"><input type="text" placeholder="Tulis catatan baru"><button class="pill">Tambah</button></div><ul></ul></div>');
+  const ul=$('ul',w),inp=$('input',w);
+  const draw=()=>{
+    ul.replaceChildren();
+    if(!S.notes.length){ul.innerHTML='<li class="empty">Belum ada catatan. Tulis satu di atas.</li>';return}
+    S.notes.forEach((t,i)=>{
+      const li=document.createElement('li'),s=document.createElement('span'),x=document.createElement('button');
+      s.textContent=t;x.textContent='Hapus';x.className='x';
+      x.onclick=()=>{S.notes.splice(i,1);save();draw()};
+      li.append(s,x);ul.append(li);
+    });
+  };
+  const add=()=>{const v=inp.value.trim();if(!v)return;S.notes.unshift(v);inp.value='';save();draw()};
+  $('.pill',w).onclick=add;inp.onkeydown=e=>{if(e.key==='Enter')add()};
+  draw();return{el:w};
+ }},
+ kamera:{n:'Kamera',i:'📷',c:'#7a5ea8',run(){
+  const w=el('<div class="cam"><video autoplay playsinline muted></video><p></p></div>');
+  let st,closed=false;
+  navigator.mediaDevices?.getUserMedia({video:true}).then(s=>{
+    if(closed){s.getTracks().forEach(t=>t.stop());return}
+    st=s;$('video',w).srcObject=s;
+  }).catch(()=>{$('p',w).textContent='Kamera tidak bisa dibuka. Izinkan akses kamera di browser, lalu buka lagi.'});
+  if(!navigator.mediaDevices)$('p',w).textContent='Browser ini tidak mendukung kamera.';
+  return{el:w,close(){closed=true;st?.getTracks().forEach(t=>t.stop())}};
+ }},
+ pengaturan:{n:'Pengaturan',i:'⚙️',c:'#5b6b73',run(){
+  const w=el('<div><div class="set"><span>Mode gelap</span><input type="checkbox" id="dk"></div><h4>Wallpaper</h4><div class="sws"></div><h4>Kecerahan</h4><input type="range" id="br" min="30" max="100" style="width:100%"><div class="set"><span>Hapus semua data HP</span><button class="x" id="rs">Atur ulang</button></div></div>');
+  const dk=$('#dk',w),br=$('#br',w),sws=$('.sws',w);
+  dk.checked=S.dark;br.value=S.bright;
+  dk.onchange=()=>{S.dark=dk.checked;save();theme()};
+  br.oninput=()=>{S.bright=+br.value;save();theme()};
+  WALLS.forEach((g,i)=>{
+    const b=document.createElement('button');b.style.background=g;b.setAttribute('aria-label','Wallpaper '+(i+1));
+    if(i===S.wall)b.className='sel';
+    b.onclick=()=>{S.wall=i;save();theme();sws.querySelectorAll('button').forEach((x,j)=>x.classList.toggle('sel',j===i))};
+    sws.append(b);
+  });
+  $('#rs',w).onclick=()=>{try{localStorage.removeItem('hp')}catch{}location.reload()};
+  return{el:w};
+ }}
+};
+/* ---------- Sistem ---------- */
+let cur=null;
+const home=$('#home'),appV=$('#appV'),lock=$('#lock');
+function openApp(id){
+  closeApp();const a=apps[id],r=a.run();cur=r;
+  $('#appT').textContent=a.n;$('#appB').replaceChildren(r.el);
+  appV.classList.add('on');screen.classList.add('inapp');
+}
+function closeApp(){
+  if(cur){cur.close?.();cur=null}
+  appV.classList.remove('on');screen.classList.remove('inapp');
+}
+function mkIcon(id){
+  const a=apps[id],b=document.createElement('button');b.className='ic';
+  b.innerHTML='<span style="background:'+a.c+'">'+a.i+'</span>'+a.n;
+  b.onclick=()=>openApp(id);return b;
+}
+['kalkulator','jam','catatan','kamera'].forEach(id=>$('#grid').append(mkIcon(id)));
+['pengaturan'].forEach(id=>$('#dock').append(mkIcon(id)));
+$('#back').onclick=$('#goHome').onclick=closeApp;
+$('#pwr').onclick=()=>{closeApp();lock.classList.remove('up')};
+// buka kunci: geser ke atas atau ketuk
+let y0=null;
+lock.onpointerdown=e=>{y0=e.clientY};
+lock.onpointerup=e=>{if(y0!==null&&(y0-e.clientY>50||Math.abs(y0-e.clientY)<6))lock.classList.add('up');y0=null};
+lock.tabIndex=0;lock.onkeydown=e=>{if(e.key==='Enter'||e.key===' ')lock.classList.add('up')};
+// jam sistem
+function tick(){
+  const d=new Date(),t=d.toLocaleTimeString('id-ID',{hour:'2-digit',minute:'2-digit'}).replace('.',':');
+  $('#sbT').textContent=t;$('#lkT').textContent=t;
+  $('#lkD').textContent=d.toLocaleDateString('id-ID',{weekday:'long',day:'numeric',month:'long'});
+  cur?.tick?.();
+}
+tick();setInterval(tick,1000);
+// skala layar agar muat di HP maupun desktop
+function fit(){
+  const s=Math.min(1,(innerHeight-16)/740,(innerWidth-24)/370);
+  $('#phone').style.transform='scale('+s+')';
+}
+addEventListener('resize',fit);fit();
+theme();lock.classList.remove('up');
+</script>
+</body>
+</html>
